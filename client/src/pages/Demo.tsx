@@ -43,6 +43,11 @@ export default function Demo() {
     <div className="min-h-screen bg-background font-sans selection:bg-primary/20">
       {/* Header for Tablet */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="bg-primary/10 py-2 text-center text-xs font-bold text-primary">
+          <span className="mr-4">ほかのデモもためしてみよう：</span>
+          <Link href="/cooperation-demo" className="underline hover:text-primary/80 mr-4">協力チェーン</Link>
+          <Link href="/teacher-dashboard" className="underline hover:text-primary/80">先生用画面</Link>
+        </div>
         <div className="container py-4 flex items-center justify-between">
           <Link href="/">
             <Button variant="ghost" className="rounded-full hover:bg-muted text-muted-foreground">
