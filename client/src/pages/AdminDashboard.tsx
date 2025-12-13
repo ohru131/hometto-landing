@@ -95,6 +95,12 @@ export default function AdminDashboard() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/class-management">
+              <Button variant="outline" size="sm">
+                <School className="mr-2 h-4 w-4" />
+                学校・クラス管理
+              </Button>
+            </Link>
             <div className="text-right hidden sm:block">
               <p className="text-xs text-slate-400 font-bold">管理者</p>
               <p className="font-heading font-bold text-sm">学校管理者</p>

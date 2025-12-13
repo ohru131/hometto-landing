@@ -66,12 +66,12 @@ export default function Home() {
                 先生だけでなく、子ども同士が認め合う新しい学校の形をつくります。
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
-                <Link href="/demo">
-                <Button size="lg" className="btn-bouncy bg-primary text-white hover:bg-primary/90 text-lg px-8 h-14">
-                  はじめる
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
+                <Link href="/role-selection">
+                  <Button size="lg" className="btn-bouncy bg-primary text-white hover:bg-primary/90 text-lg px-8 h-14">
+                    はじめる
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
                 <Button size="lg" variant="outline" className="btn-bouncy border-2 border-foreground/10 hover:bg-foreground/5 text-lg px-8 h-14">
                   仕組みを知る
                 </Button>
@@ -265,6 +265,12 @@ export default function Home() {
                         <p className="text-sm text-white/70">「誰が・いつ・誰を」評価したかが明確に残ります。</p>
                       </div>
                     </div>
+                    <Link href="/blockchain-info">
+                      <Button size="lg" variant="outline" className="mt-6 bg-white/10 hover:bg-white/20 text-white border-white/30">
+                        ブロックチェーン記録を見る
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </Link>
                   </div>
                 </div>
                 <div className="relative">

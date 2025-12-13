@@ -3,6 +3,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import NotificationSettings from "@/pages/NotificationSettings";
 import AdminDashboard from "@/pages/AdminDashboard";
+import RoleSelection from "@/pages/RoleSelection";
+import ClassManagement from "@/pages/ClassManagement";
+import BlockchainInfo from "@/pages/BlockchainInfo";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -20,6 +23,9 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/notification-settings"} component={NotificationSettings} />
       <Route path={"/admin-dashboard"} component={AdminDashboard} />
+      <Route path={"/role-selection"} component={RoleSelection} />
+      <Route path={"/class-management"} component={ClassManagement} />
+      <Route path={"/blockchain-info"} component={BlockchainInfo} />
       <Route path={"/demo"} component={Demo} />
       <Route path={"/teacher-dashboard"} component={TeacherDashboard} />
       <Route path={"/cooperation-demo"} component={CooperationDemo} />
