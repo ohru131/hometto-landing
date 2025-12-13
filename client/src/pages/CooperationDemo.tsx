@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { showCooperationNotification, showCooperationCompleteNotification } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AnimatePresence, motion } from "framer-motion";
@@ -54,6 +55,11 @@ export default function CooperationDemo() {
       setIsComplete(true);
       setTimeout(() => {
         toast.success("🎉 協力NFTが発行されました！");
+        
+        // 完成通知
+        if (localStorage.getItem("notif_cooperation") !== "false") {
+          showCooperationCompleteNotification(coopDetails.title);
+        }
       }, 500);
     }
   }, [coopDetails]);

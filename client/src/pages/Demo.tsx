@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { showPraiseNotification } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AnimatePresence, motion } from "framer-motion";
@@ -33,6 +34,19 @@ export default function Demo() {
     onSuccess: () => {
       setIsSent(true);
       toast.success("ほめトークンを送ったよ！");
+      
+      // 受信者側での通知（デモ用）
+      if (localStorage.getItem("notif_praise") !== "false") {
+        setTimeout(() => {
+          const stamp = STAMPS.find(s => s.id === selectedStamp);
+          showPraiseNotification(
+            currentUser?.displayName || currentUser?.name || "あなた",
+            stamp?.label || "",
+            selectedStamp || "help"
+          );
+        }, 1000);
+      }
+      
       setTimeout(() => {
         setIsSent(false);
         setSelectedStudent(null);
@@ -91,7 +105,9 @@ export default function Demo() {
           <Link href="/cooperation-demo" className="underline hover:text-primary/80 mr-4">協力チェーン</Link>
           <Link href="/teacher-dashboard" className="underline hover:text-primary/80 mr-4">先生用画面</Link>
           <Link href="/parent-dashboard" className="underline hover:text-primary/80 mr-4">保護者用画面</Link>
-          <Link href="/avatar-customizer" className="underline hover:text-primary/80">アバター</Link>
+          <Link href="/avatar-customizer" className="underline hover:text-primary/80 mr-4">アバター</Link>
+          <Link href="/notification-settings" className="underline hover:text-primary/80 mr-4">通知設定</Link>
+          <Link href="/admin-dashboard" className="underline hover:text-primary/80">管理者</Link>
         </div>
         <div className="container py-4 flex items-center justify-between">
           <Link href="/">
