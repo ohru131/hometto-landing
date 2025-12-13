@@ -54,6 +54,8 @@ export const cooperations = mysqlTable("cooperations", {
   id: int("id").autoincrement().primaryKey(),
   title: varchar("title", { length: 200 }).notNull(), // 協力活動のタイトル
   description: text("description"), // 説明
+  requiredApprovals: int("requiredApprovals").default(4).notNull(), // 必要な承認数
+  currentApprovals: int("currentApprovals").default(0).notNull(), // 現在の承認数
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

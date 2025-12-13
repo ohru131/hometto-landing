@@ -15,6 +15,13 @@
       "when": 1765604614864,
       "tag": "0001_graceful_tusk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1765606031524,
+      "tag": "0002_superb_raza",
+      "breakpoints": true
     }
   ]
 }

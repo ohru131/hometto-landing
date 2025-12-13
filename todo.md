@@ -10,12 +10,12 @@
   - [x] 統計データ取得API
 
 ## フロントエンド連携
-- [ ] 既存デモページのバックエンド連携
-  - [ ] Demo.tsx (ほめトークン送信)
-  - [ ] TeacherDashboard.tsx (統計データ表示)
-  - [ ] CooperationDemo.tsx (協力NFT)
-  - [ ] ParentDashboard.tsx (保護者向けデータ)
-  - [ ] AvatarCustomizer.tsx (アイテムアンロック)
+- [x] 既存デモページのバックエンド連携
+  - [x] Demo.tsx (ほめトークン送信)
+  - [x] TeacherDashboard.tsx (統計データ表示)
+  - [x] CooperationDemo.tsx (協力NFT)
+  - [x] ParentDashboard.tsx (保護者向けデータ)
+  - [x] AvatarCustomizer.tsx (アイテムアンロック)
 
 ## PWA対応
 - [x] Service Worker設定
@@ -25,3 +25,7 @@
 
 ## テスト
 - [ ] Vitestテストケース作成
+
+## 追加機能
+- [ ] リアルタイム通知機能
+- [ ] Symbolブロックチェーン連携

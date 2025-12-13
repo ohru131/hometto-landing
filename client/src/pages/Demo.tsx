@@ -1,21 +1,11 @@
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Check, Heart, Lightbulb, Sparkles, Star, Trophy, Users } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Check, Heart, Lightbulb, Sparkles, Trophy, Users, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-
-// Mock Data for Classmates
-const CLASSMATES = [
-  { id: 1, name: "ゆうと", color: "bg-blue-400" },
-  { id: 2, name: "さくら", color: "bg-pink-400" },
-  { id: 3, name: "れん", color: "bg-green-400" },
-  { id: 4, name: "ひな", color: "bg-yellow-400" },
-  { id: 5, name: "はると", color: "bg-purple-400" },
-  { id: 6, name: "ゆい", color: "bg-red-400" },
-  { id: 7, name: "そうた", color: "bg-indigo-400" },
-  { id: 8, name: "あおい", color: "bg-teal-400" },
-];
+import { toast } from "sonner";
 
 // Mock Data for Praise Stamps
 const STAMPS = [
@@ -25,19 +15,72 @@ const STAMPS = [
   { id: "try", label: "がんばった", icon: Trophy, color: "text-orange-500", bg: "bg-orange-100" },
 ];
 
+const AVATAR_COLORS = ["bg-blue-400", "bg-pink-400", "bg-green-400", "bg-yellow-400", "bg-purple-400", "bg-red-400", "bg-indigo-400", "bg-teal-400"];
+
 export default function Demo() {
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
   const [selectedStamp, setSelectedStamp] = useState<string | null>(null);
   const [isSent, setIsSent] = useState(false);
 
+  // Fetch current user
+  const { data: currentUser, isLoading: userLoading } = trpc.user.getProfile.useQuery();
+  
+  // Fetch all users (classmates)
+  const { data: allUsers, isLoading: usersLoading, refetch: refetchUsers } = trpc.user.getAllUsers.useQuery();
+  
+  // Send praise mutation
+  const sendPraiseMutation = trpc.praise.send.useMutation({
+    onSuccess: () => {
+      setIsSent(true);
+      toast.success("ほめトークンを送ったよ！");
+      setTimeout(() => {
+        setIsSent(false);
+        setSelectedStudent(null);
+        setSelectedStamp(null);
+      }, 3000);
+      refetchUsers(); // Refresh user data to show updated token balance
+    },
+    onError: (error) => {
+      toast.error("エラーが発生しました: " + error.message);
+    },
+  });
+
   const handleSend = () => {
-    setIsSent(true);
-    setTimeout(() => {
-      setIsSent(false);
-      setSelectedStudent(null);
-      setSelectedStamp(null);
-    }, 3000);
+    if (!selectedStudent || !selectedStamp || !currentUser) return;
+    
+    const stamp = STAMPS.find(s => s.id === selectedStamp);
+    sendPraiseMutation.mutate({
+      toUserId: selectedStudent,
+      stampType: selectedStamp,
+      message: stamp?.label,
+      tokenAmount: 1,
+    });
   };
+
+  const classmates = allUsers?.filter(u => u.id !== currentUser?.id) || [];
+  const selectedStudentData = allUsers?.find(u => u.id === selectedStudent);
+
+  if (userLoading || usersLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">ログインが必要です</h2>
+          <p className="text-muted-foreground mb-6">ほめトークンを送るにはログインしてください</p>
+          <Button onClick={() => window.location.href = "/api/auth/login"}>
+            ログイン
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary/20">
@@ -64,10 +107,11 @@ export default function Demo() {
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <p className="text-sm text-muted-foreground font-bold">じぶん</p>
-              <p className="font-heading font-bold text-lg">みなと</p>
+              <p className="font-heading font-bold text-lg">{currentUser.displayName || currentUser.name || "ユーザー"}</p>
+              <p className="text-xs text-muted-foreground">トークン: {currentUser.tokenBalance || 0}</p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-primary border-4 border-white shadow-md flex items-center justify-center text-white font-heading font-bold text-xl">
-              み
+            <div className={`w-12 h-12 rounded-full ${currentUser.avatarColor ? `bg-${currentUser.avatarColor}` : 'bg-primary'} border-4 border-white shadow-md flex items-center justify-center text-white font-heading font-bold text-xl`}>
+              {(currentUser.displayName || currentUser.name || "U")[0]}
             </div>
           </div>
         </div>
@@ -92,154 +136,180 @@ export default function Demo() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                {CLASSMATES.map((student) => (
+                {classmates.map((student, index) => (
                   <motion.button
                     key={student.id}
                     whileHover={{ scale: 1.05, rotate: 2 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setSelectedStudent(student.id)}
-                    className="group relative aspect-square bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all border-4 border-transparent hover:border-primary/20 flex flex-col items-center justify-center gap-4 p-4"
+                    className="group"
                   >
-                    <div className={`w-24 h-24 rounded-full ${student.color} flex items-center justify-center text-white text-4xl font-heading font-bold shadow-inner`}>
-                      {student.name[0]}
-                    </div>
-                    <span className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
-                      {student.name}
-                    </span>
+                    <Card className="p-6 text-center space-y-3 hover:shadow-xl transition-shadow border-2 border-transparent group-hover:border-secondary">
+                      <div className={`w-20 h-20 mx-auto rounded-full ${AVATAR_COLORS[index % AVATAR_COLORS.length]} border-4 border-white shadow-lg flex items-center justify-center text-white font-heading font-bold text-3xl`}>
+                        {(student.displayName || student.name || "U")[0]}
+                      </div>
+                      <p className="font-heading font-bold text-xl">{student.displayName || student.name || `ユーザー${student.id}`}</p>
+                      <p className="text-xs text-muted-foreground">トークン: {student.tokenBalance || 0}</p>
+                    </Card>
                   </motion.button>
                 ))}
               </div>
             </motion.div>
-          ) : (
-            /* Step 2: Select Stamp & Send */
+          ) : !selectedStamp ? (
+            /* Step 2: Select Stamp */
             <motion.div
               key="step2"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.1 }}
-              className="max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
             >
-              <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white relative">
-                {/* Back Button inside Card */}
-                <div className="absolute top-6 left-6 z-10">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => { setSelectedStudent(null); setSelectedStamp(null); }}
-                    className="rounded-full hover:bg-muted w-12 h-12"
-                  >
-                    <ArrowLeft className="h-6 w-6 text-muted-foreground" />
-                  </Button>
-                </div>
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+                  <span className="text-secondary">{selectedStudentData?.displayName || selectedStudentData?.name}</span> さんに
+                </h2>
+                <p className="text-xl text-muted-foreground">どんなことをほめる？</p>
+              </div>
 
-                <div className="p-8 md:p-12 space-y-8 text-center">
-                  <div className="space-y-2">
-                    <div className={`w-32 h-32 mx-auto rounded-full ${CLASSMATES.find(s => s.id === selectedStudent)?.color} flex items-center justify-center text-white text-5xl font-heading font-bold shadow-lg mb-4`}>
-                      {CLASSMATES.find(s => s.id === selectedStudent)?.name[0]}
-                    </div>
-                    <h2 className="text-3xl font-heading font-bold">
-                      <span className="text-primary">{CLASSMATES.find(s => s.id === selectedStudent)?.name}</span> さんに
-                    </h2>
-                    <p className="text-xl text-muted-foreground">どんな きもちを おくる？</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {STAMPS.map((stamp) => (
-                      <button
-                        key={stamp.id}
-                        onClick={() => setSelectedStamp(stamp.id)}
-                        className={`p-4 rounded-2xl border-4 transition-all duration-200 flex flex-col items-center gap-3 ${
-                          selectedStamp === stamp.id
-                            ? "border-primary bg-primary/5 scale-105 shadow-md"
-                            : "border-transparent bg-muted/30 hover:bg-muted/50 hover:scale-105"
-                        }`}
-                      >
-                        <div className={`w-16 h-16 rounded-full ${stamp.bg} flex items-center justify-center`}>
-                          <stamp.icon className={`w-8 h-8 ${stamp.color}`} />
-                        </div>
-                        <span className="font-bold text-lg text-foreground">{stamp.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="pt-4">
-                    <Button
-                      size="lg"
-                      disabled={!selectedStamp || isSent}
-                      onClick={handleSend}
-                      className={`w-full h-20 text-2xl rounded-full font-heading font-bold shadow-xl transition-all duration-300 ${
-                        selectedStamp 
-                          ? "bg-secondary hover:bg-secondary/90 hover:scale-105 hover:shadow-secondary/30 text-white btn-bouncy" 
-                          : "bg-muted text-muted-foreground cursor-not-allowed"
-                      }`}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                {STAMPS.map((stamp) => {
+                  const Icon = stamp.icon;
+                  return (
+                    <motion.button
+                      key={stamp.id}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSelectedStamp(stamp.id)}
+                      className="group"
                     >
-                      {isSent ? (
-                        <span className="flex items-center gap-3">
-                          <Check className="w-8 h-8" /> おくりました！
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-3">
-                          <Star className="w-6 h-6 fill-current" /> トークンをおくる
-                        </span>
-                      )}
-                    </Button>
+                      <Card className={`p-8 ${stamp.bg} border-4 border-transparent group-hover:border-primary transition-all`}>
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center">
+                            <Icon className={`w-12 h-12 ${stamp.color}`} />
+                          </div>
+                          <p className="font-heading font-bold text-2xl text-foreground">{stamp.label}</p>
+                        </div>
+                      </Card>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              <div className="text-center">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setSelectedStudent(null)}
+                  className="rounded-full px-8"
+                >
+                  もどる
+                </Button>
+              </div>
+            </motion.div>
+          ) : (
+            /* Step 3: Confirm and Send */
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8 max-w-xl mx-auto"
+            >
+              <div className="text-center space-y-4">
+                <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+                  これでいい？
+                </h2>
+                
+                <Card className="p-8 space-y-6">
+                  <div className="flex items-center justify-center gap-6">
+                    <div className="text-center">
+                      <div className={`w-16 h-16 mx-auto rounded-full ${currentUser.avatarColor ? `bg-${currentUser.avatarColor}` : 'bg-primary'} border-4 border-white shadow-md flex items-center justify-center text-white font-heading font-bold text-2xl`}>
+                        {(currentUser.displayName || currentUser.name || "U")[0]}
+                      </div>
+                      <p className="mt-2 font-bold text-sm">{currentUser.displayName || currentUser.name}</p>
+                    </div>
+                    
+                    <div className="flex-shrink-0">
+                      <Heart className="w-12 h-12 text-secondary animate-pulse" />
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className={`w-16 h-16 mx-auto rounded-full ${AVATAR_COLORS[classmates.findIndex(c => c.id === selectedStudent) % AVATAR_COLORS.length]} border-4 border-white shadow-md flex items-center justify-center text-white font-heading font-bold text-2xl`}>
+                        {(selectedStudentData?.displayName || selectedStudentData?.name || "U")[0]}
+                      </div>
+                      <p className="mt-2 font-bold text-sm">{selectedStudentData?.displayName || selectedStudentData?.name}</p>
+                    </div>
                   </div>
-                </div>
-              </Card>
+                  
+                  <div className="text-center">
+                    {(() => {
+                      const stamp = STAMPS.find(s => s.id === selectedStamp);
+                      const Icon = stamp?.icon || Heart;
+                      return (
+                        <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-full ${stamp?.bg}`}>
+                          <Icon className={`w-8 h-8 ${stamp?.color}`} />
+                          <span className="font-heading font-bold text-xl">{stamp?.label}</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </Card>
+              </div>
+
+              <div className="flex gap-4 justify-center">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setSelectedStamp(null)}
+                  className="rounded-full px-8"
+                  disabled={sendPraiseMutation.isPending}
+                >
+                  もどる
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={handleSend}
+                  className="rounded-full px-12 bg-secondary hover:bg-secondary/90 text-white font-heading font-bold text-xl"
+                  disabled={sendPraiseMutation.isPending}
+                >
+                  {sendPraiseMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      送信中...
+                    </>
+                  ) : (
+                    "おくる！"
+                  )}
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Success Animation Overlay */}
+        {/* Success Animation */}
         <AnimatePresence>
           {isSent && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+              className="fixed inset-0 bg-secondary/20 backdrop-blur-sm z-50 flex items-center justify-center"
             >
-              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" />
               <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 1.5, opacity: 0 }}
-                transition={{ type: "spring", damping: 12 }}
-                className="relative z-10 flex flex-col items-center text-center"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1, rotate: [0, 10, -10, 0] }}
+                exit={{ scale: 0 }}
+                transition={{ type: "spring", bounce: 0.5 }}
+                className="bg-white rounded-3xl p-12 shadow-2xl text-center space-y-6"
               >
-                <div className="w-64 h-64 bg-yellow-400 rounded-full flex items-center justify-center shadow-[0_0_100px_rgba(250,204,21,0.5)] mb-8 animate-bounce">
-                  <Star className="w-32 h-32 text-white fill-white" />
+                <div className="w-32 h-32 mx-auto rounded-full bg-secondary/10 flex items-center justify-center">
+                  <Check className="w-20 h-20 text-secondary" />
                 </div>
-                <h2 className="text-5xl md:text-7xl font-heading font-extrabold text-secondary drop-shadow-lg">
-                  すごい！
-                </h2>
-                <p className="text-2xl md:text-3xl font-bold text-foreground mt-4">
-                  ほめトークンが とどいたよ！
+                <h3 className="text-4xl font-heading font-bold text-secondary">おくったよ！</h3>
+                <p className="text-xl text-muted-foreground">
+                  {selectedStudentData?.displayName || selectedStudentData?.name}さん、よろこんでくれるかな？
                 </p>
               </motion.div>
-              
-              {/* Confetti Particles (Simplified with CSS/Motion) */}
-              {[...Array(20)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ 
-                    x: 0, 
-                    y: 0, 
-                    opacity: 1, 
-                    scale: Math.random() * 0.5 + 0.5 
-                  }}
-                  animate={{ 
-                    x: (Math.random() - 0.5) * 1000, 
-                    y: (Math.random() - 0.5) * 1000, 
-                    opacity: 0,
-                    rotate: Math.random() * 360
-                  }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                  className={`absolute w-6 h-6 rounded-full ${
-                    ["bg-red-400", "bg-blue-400", "bg-green-400", "bg-yellow-400", "bg-purple-400"][Math.floor(Math.random() * 5)]
-                  }`}
-                />
-              ))}
             </motion.div>
           )}
         </AnimatePresence>

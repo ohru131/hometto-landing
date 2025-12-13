@@ -214,8 +214,19 @@ export async function getCooperationParticipants(cooperationId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(cooperationParticipants)
+  const result = await db.select({
+    id: cooperationParticipants.id,
+    cooperationId: cooperationParticipants.cooperationId,
+    userId: cooperationParticipants.userId,
+    approved: cooperationParticipants.approved,
+    approvedAt: cooperationParticipants.approvedAt,
+    user: users,
+  })
+    .from(cooperationParticipants)
+    .leftJoin(users, eq(cooperationParticipants.userId, users.id))
     .where(eq(cooperationParticipants.cooperationId, cooperationId));
+  
+  return result;
 }
 
 export async function getUserCooperations(userId: number, limit = 50) {
@@ -233,6 +244,24 @@ export async function getUserCooperations(userId: number, limit = 50) {
     .limit(limit);
 
   return result;
+}
+
+export async function getAllCooperations(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(cooperations)
+    .orderBy(desc(cooperations.createdAt))
+    .limit(limit);
+}
+
+export async function incrementCooperationApprovals(cooperationId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(cooperations)
+    .set({ currentApprovals: sql`${cooperations.currentApprovals} + 1` })
+    .where(eq(cooperations.id, cooperationId));
 }
 
 // ===== Unlocked Items (アバターアイテム) =====

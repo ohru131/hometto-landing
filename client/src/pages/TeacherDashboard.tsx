@@ -1,29 +1,87 @@
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, BarChart3, Calendar, Heart, Lightbulb, Sparkles, Trophy, Users } from "lucide-react";
+import { ArrowLeft, BarChart3, Calendar, Heart, Lightbulb, Loader2, Sparkles, Trophy, Users } from "lucide-react";
 import { Link } from "wouter";
 import { Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
 
-// Mock Data for Class Stats
-const CLASS_STATS = [
-  { name: "てつだった", count: 45, color: "#ec4899" }, // pink-500
-  { name: "アイデア", count: 32, color: "#eab308" }, // yellow-500
-  { name: "やさしい", count: 28, color: "#3b82f6" }, // blue-500
-  { name: "がんばった", count: 38, color: "#f97316" }, // orange-500
-];
+const STAMP_COLORS: Record<string, string> = {
+  help: "#ec4899", // pink-500
+  idea: "#eab308", // yellow-500
+  kind: "#3b82f6", // blue-500
+  try: "#f97316", // orange-500
+};
 
-const STUDENT_ACTIVITY = [
-  { name: "ゆうと", sent: 12, received: 15 },
-  { name: "さくら", sent: 18, received: 20 },
-  { name: "れん", sent: 8, received: 12 },
-  { name: "ひな", sent: 15, received: 18 },
-  { name: "はると", sent: 10, received: 10 },
-  { name: "ゆい", sent: 22, received: 25 },
-  { name: "そうた", sent: 14, received: 16 },
-  { name: "あおい", sent: 20, received: 22 },
-];
+const STAMP_LABELS: Record<string, string> = {
+  help: "てつだった",
+  idea: "アイデア",
+  kind: "やさしい",
+  try: "がんばった",
+};
 
 export default function TeacherDashboard() {
+  // Fetch all praises
+  const { data: allPraises, isLoading: praisesLoading } = trpc.praise.getAll.useQuery({ limit: 1000 });
+  
+  // Fetch all users
+  const { data: allUsers, isLoading: usersLoading } = trpc.user.getAllUsers.useQuery();
+  
+  // Fetch stats
+  const { data: stats, isLoading: statsLoading } = trpc.stats.getOverview.useQuery();
+
+  // Calculate stamp distribution
+  const stampStats = useMemo(() => {
+    if (!allPraises) return [];
+    
+    const counts: Record<string, number> = {};
+    allPraises.forEach(praise => {
+      counts[praise.stampType] = (counts[praise.stampType] || 0) + 1;
+    });
+    
+    return Object.entries(counts).map(([type, count]) => ({
+      name: STAMP_LABELS[type] || type,
+      count,
+      color: STAMP_COLORS[type] || "#888888",
+    }));
+  }, [allPraises]);
+
+  // Calculate student activity
+  const studentActivity = useMemo(() => {
+    if (!allUsers || !allPraises) return [];
+    
+    return allUsers.map(user => {
+      const sent = allPraises.filter(p => p.fromUserId === user.id).length;
+      const received = allPraises.filter(p => p.toUserId === user.id).length;
+      
+      return {
+        name: user.displayName || user.name || `ユーザー${user.id}`,
+        sent,
+        received,
+      };
+    }).sort((a, b) => (b.sent + b.received) - (a.sent + a.received));
+  }, [allUsers, allPraises]);
+
+  // Calculate participation rate
+  const participationRate = useMemo(() => {
+    if (!allUsers || !allPraises) return 0;
+    
+    const activeUsers = new Set([
+      ...allPraises.map(p => p.fromUserId),
+      ...allPraises.map(p => p.toUserId),
+    ]);
+    
+    return Math.round((activeUsers.size / allUsers.length) * 100);
+  }, [allUsers, allPraises]);
+
+  if (praisesLoading || usersLoading || statsLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       {/* Header */}
@@ -45,7 +103,7 @@ export default function TeacherDashboard() {
           <div className="flex items-center gap-4">
             <div className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              2026年6月15日 (月)
+              {new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
             </div>
             <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
               T
@@ -63,8 +121,8 @@ export default function TeacherDashboard() {
                 <Heart className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-bold">今週のほめトークン</p>
-                <p className="text-2xl font-heading font-bold">143 <span className="text-sm font-normal text-slate-400">件</span></p>
+                <p className="text-sm text-muted-foreground font-bold">総ほめトークン</p>
+                <p className="text-2xl font-heading font-bold">{stats?.totalPraises || 0} <span className="text-sm font-normal text-slate-400">件</span></p>
               </div>
             </CardContent>
           </Card>
@@ -75,7 +133,7 @@ export default function TeacherDashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground font-bold">参加率</p>
-                <p className="text-2xl font-heading font-bold">96 <span className="text-sm font-normal text-slate-400">%</span></p>
+                <p className="text-2xl font-heading font-bold">{participationRate} <span className="text-sm font-normal text-slate-400">%</span></p>
               </div>
             </CardContent>
           </Card>
@@ -85,105 +143,152 @@ export default function TeacherDashboard() {
                 <Trophy className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-bold">発行された協力NFT</p>
-                <p className="text-2xl font-heading font-bold">12 <span className="text-sm font-normal text-slate-400">枚</span></p>
+                <p className="text-sm text-muted-foreground font-bold">総トークン数</p>
+                <p className="text-2xl font-heading font-bold">{stats?.totalTokens || 0} <span className="text-sm font-normal text-slate-400">枚</span></p>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 bg-purple-100 rounded-full text-purple-600">
-                <Sparkles className="h-6 w-6" />
+                <BarChart3 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-bold">クラスの雰囲気スコア</p>
-                <p className="text-2xl font-heading font-bold">A+ <span className="text-sm font-normal text-slate-400">上昇中</span></p>
+                <p className="text-sm text-muted-foreground font-bold">クラス人数</p>
+                <p className="text-2xl font-heading font-bold">{stats?.totalUsers || 0} <span className="text-sm font-normal text-slate-400">人</span></p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Charts Section */}
+        {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Token Distribution */}
-          <Card className="col-span-1">
+          {/* Stamp Distribution Pie Chart */}
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-slate-500" />
-                トークンの種類内訳
+                <Sparkles className="h-5 w-5 text-primary" />
+                ほめトークンの種類別分布
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={CLASS_STATS}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="count"
-                  >
-                    {CLASS_STATS.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+            <CardContent>
+              {stampStats.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={stampStats}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {stampStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  データがありません
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Student Activity */}
-          <Card className="col-span-1">
+          {/* Student Activity Bar Chart */}
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-slate-500" />
-                児童ごとの活動状況（送った数 / もらった数）
+                <Users className="h-5 w-5 text-primary" />
+                児童別活動状況
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={STUDENT_ACTIVITY}>
-                  <XAxis dataKey="name" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="sent" name="送った" fill="#4D96FF" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="received" name="もらった" fill="#FF6B6B" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent>
+              {studentActivity.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={studentActivity.slice(0, 8)}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="sent" fill="#3b82f6" name="送信" />
+                    <Bar dataKey="received" fill="#ec4899" name="受信" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  データがありません
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity Feed */}
+        {/* Student List */}
         <Card>
           <CardHeader>
-            <CardTitle>最近の活動タイムライン</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              全児童一覧
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                { time: "10:15", user: "ゆい", action: "さくらさんに「てつだってくれた」を送りました", icon: Heart, color: "text-pink-500 bg-pink-100" },
-                { time: "10:12", user: "あおい", action: "そうたさんに「ナイスアイデア」を送りました", icon: Lightbulb, color: "text-yellow-500 bg-yellow-100" },
-                { time: "09:45", user: "班活動", action: "1班が「理科実験成功」の協力NFTを発行しました", icon: Trophy, color: "text-green-500 bg-green-100" },
-                { time: "09:30", user: "ゆうと", action: "れんさんに「がんばった」を送りました", icon: Sparkles, color: "text-orange-500 bg-orange-100" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-lg transition-colors border-b last:border-0">
-                  <div className="text-sm text-slate-400 font-mono w-12">{item.time}</div>
-                  <div className={`p-2 rounded-full ${item.color}`}>
-                    <item.icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <span className="font-bold text-slate-700">{item.user}</span>
-                    <span className="text-slate-600 ml-2">{item.action}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-bold text-sm text-slate-600">名前</th>
+                    <th className="text-center py-3 px-4 font-bold text-sm text-slate-600">送信数</th>
+                    <th className="text-center py-3 px-4 font-bold text-sm text-slate-600">受信数</th>
+                    <th className="text-center py-3 px-4 font-bold text-sm text-slate-600">保有トークン</th>
+                    <th className="text-center py-3 px-4 font-bold text-sm text-slate-600">活動度</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentActivity.map((student, index) => {
+                    const total = student.sent + student.received;
+                    const activityLevel = total > 30 ? "高" : total > 15 ? "中" : "低";
+                    const activityColor = total > 30 ? "text-green-600 bg-green-100" : total > 15 ? "text-blue-600 bg-blue-100" : "text-slate-600 bg-slate-100";
+                    const user = allUsers?.find(u => (u.displayName || u.name) === student.name);
+                    
+                    return (
+                      <tr key={index} className="border-b hover:bg-slate-50">
+                        <td className="py-3 px-4 font-bold">{student.name}</td>
+                        <td className="text-center py-3 px-4">{student.sent}</td>
+                        <td className="text-center py-3 px-4">{student.received}</td>
+                        <td className="text-center py-3 px-4 font-bold text-primary">{user?.tokenBalance || 0}</td>
+                        <td className="text-center py-3 px-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${activityColor}`}>
+                            {activityLevel}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Insights */}
+        <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-900">
+              <Lightbulb className="h-5 w-5" />
+              学級経営のヒント
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-blue-800">
+            <p>✨ <strong>活動度が「低」の児童</strong>には、個別に声をかけて参加を促しましょう。</p>
+            <p>💡 <strong>受信数が少ない児童</strong>の良い行動を、クラス全体で共有してみましょう。</p>
+            <p>🎯 <strong>送信数が多い児童</strong>は、クラスのムードメーカーとして活躍しています。</p>
           </CardContent>
         </Card>
       </main>

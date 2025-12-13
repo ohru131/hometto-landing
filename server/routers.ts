@@ -91,26 +91,25 @@ export const appRouter = router({
       .input(z.object({
         title: z.string(),
         description: z.string().optional(),
-        participantIds: z.array(z.number()),
+        requiredApprovals: z.number(),
       }))
       .mutation(async ({ ctx, input }) => {
         // 協力記録を作成
         const cooperationId = await db.createCooperation({
           title: input.title,
           description: input.description,
+          requiredApprovals: input.requiredApprovals,
+          currentApprovals: 0,
         });
         
-        // 参加者を追加（作成者は自動承認）
-        for (const userId of input.participantIds) {
-          await db.addCooperationParticipant({
-            cooperationId,
-            userId,
-            approved: userId === ctx.user.id ? 1 : 0,
-            approvedAt: userId === ctx.user.id ? new Date() : undefined,
-          });
-        }
+        // 作成者を参加者として追加（未承認）
+        await db.addCooperationParticipant({
+          cooperationId,
+          userId: ctx.user.id,
+          approved: 0,
+        });
         
-        return { cooperationId, success: true };
+        return { id: cooperationId, success: true };
       }),
     
     approve: protectedProcedure
@@ -120,12 +119,21 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.approveCooperationParticipant(input.cooperationId, ctx.user.id);
         
-        // 全員が承認したかチェック
-        const participants = await db.getCooperationParticipants(input.cooperationId);
-        const allApproved = participants.every(p => p.approved === 1);
+        // 協力レコードを取得
+        const cooperation = await db.getCooperationById(input.cooperationId);
+        if (!cooperation) {
+          throw new Error("協力レコードが見つかりません");
+        }
+        
+        // currentApprovalsを更新
+        await db.incrementCooperationApprovals(input.cooperationId);
+        
+        // 全員承認済みかチェック
+        const allApproved = cooperation.currentApprovals + 1 >= cooperation.requiredApprovals;
         
         // 全員承認済みなら、全員にトークンを付与
         if (allApproved) {
+          const participants = await db.getCooperationParticipants(input.cooperationId);
           for (const participant of participants) {
             await db.updateUserTokenBalance(participant.userId, 5); // 協力NFTは5トークン
           }
@@ -148,6 +156,11 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ ctx, input }) => {
         return await db.getUserCooperations(ctx.user.id, input.limit);
+      }),
+    
+    getAll: publicProcedure
+      .query(async () => {
+        return await db.getAllCooperations();
       }),
   }),
 
