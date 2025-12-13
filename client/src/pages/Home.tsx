@@ -1,3 +1,4 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Check, Heart, Link as LinkIcon, Shield, Star, Users } from "lucide-react";
@@ -5,6 +6,10 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 
 export default function Home() {
+  // The userAuth hooks provides authentication state
+  // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
+  let { user, loading, error, isAuthenticated, logout } = useAuth();
+
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {

@@ -11,8 +11,8 @@ import CooperationDemo from "./pages/CooperationDemo";
 import ParentDashboard from "./pages/ParentDashboard";
 import AvatarCustomizer from "./pages/AvatarCustomizer";
 
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
