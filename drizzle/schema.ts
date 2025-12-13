@@ -16,7 +16,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["student", "teacher", "admin"]).default("student").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -26,6 +26,8 @@ export const users = mysqlTable("users", {
   avatarColor: varchar("avatarColor", { length: 20 }).default("blue"), // アバターの色
   avatarAccessory: varchar("avatarAccessory", { length: 50 }).default("none"), // アバターのアクセサリー
   tokenBalance: int("tokenBalance").default(0).notNull(), // 所持トークン数
+  schoolId: int("schoolId"), // 学校ID
+  classId: int("classId"), // クラスID
 });
 
 export type User = typeof users.$inferSelect;
@@ -88,3 +90,31 @@ export const unlockedItems = mysqlTable("unlocked_items", {
 
 export type UnlockedItem = typeof unlockedItems.$inferSelect;
 export type InsertUnlockedItem = typeof unlockedItems.$inferInsert;
+
+/**
+ * 学校テーブル
+ */
+export const schools = mysqlTable("schools", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(), // 学校名
+  address: text("address"), // 住所
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type School = typeof schools.$inferSelect;
+export type InsertSchool = typeof schools.$inferInsert;
+
+/**
+ * クラステーブル
+ */
+export const classes = mysqlTable("classes", {
+  id: int("id").autoincrement().primaryKey(),
+  schoolId: int("schoolId").notNull(), // 学校ID
+  name: varchar("name", { length: 100 }).notNull(), // クラス名 (例: "2年3組")
+  grade: int("grade"), // 学年
+  teacherId: int("teacherId"), // 担任教員ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Class = typeof classes.$inferSelect;
+export type InsertClass = typeof classes.$inferInsert;

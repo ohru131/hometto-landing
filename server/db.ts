@@ -10,7 +10,11 @@ import {
   InsertCooperation,
   InsertCooperationParticipant,
   unlockedItems,
-  InsertUnlockedItem
+  InsertUnlockedItem,
+  schools,
+  InsertSchool,
+  classes,
+  InsertClass
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -293,4 +297,74 @@ export async function isItemUnlocked(userId: number, itemId: string): Promise<bo
     .limit(1);
 
   return result.length > 0;
+}
+
+// ===== Schools & Classes =====
+
+export async function createSchool(data: InsertSchool) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(schools).values(data);
+  return result[0].insertId;
+}
+
+export async function getAllSchools() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(schools);
+}
+
+export async function createClass(data: InsertClass) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(classes).values(data);
+  return result[0].insertId;
+}
+
+export async function getClassesBySchool(schoolId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(classes)
+    .where(eq(classes.schoolId, schoolId));
+}
+
+export async function getClassById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(classes)
+    .where(eq(classes.id, id))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getUsersByClass(classId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(users)
+    .where(eq(users.classId, classId));
+}
+
+export async function updateUserRole(userId: number, role: "student" | "teacher" | "admin") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users)
+    .set({ role })
+    .where(eq(users.id, userId));
+}
+
+export async function assignUserToClass(userId: number, classId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users)
+    .set({ classId })
+    .where(eq(users.id, userId));
 }

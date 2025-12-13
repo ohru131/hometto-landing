@@ -1,7 +1,8 @@
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Calendar, ChevronRight, Heart, Lightbulb, Loader2, MessageCircle, Sparkles, Star, Trophy, User } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronRight, Download, Heart, Lightbulb, Loader2, MessageCircle, Sparkles, Star, Trophy, User } from "lucide-react";
+import { exportGrowthReportPDF } from "@/lib/export";
 import { Link } from "wouter";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useMemo } from "react";
@@ -78,6 +79,32 @@ export default function ParentDashboard() {
               保護者用アプリ
             </h1>
           </div>
+          <Button
+            onClick={() => {
+              exportGrowthReportPDF({
+                userName: currentUser?.displayName || currentUser?.name || "お子さま",
+                className: "2年3組",
+                totalTokens: currentUser?.tokenBalance || 0,
+                praisesReceived: (receivedPraises || []).map(p => ({
+                  from: `User${p.fromUserId}`,
+                  message: p.message || "",
+                  stampType: p.stampType,
+                  createdAt: new Date(p.createdAt),
+                })),
+                cooperations: (cooperations || []).map(c => ({
+                  title: c.cooperation.title,
+                  description: c.cooperation.description || "",
+                  createdAt: new Date(c.cooperation.createdAt),
+                })),
+              });
+            }}
+            variant="outline"
+            size="sm"
+            className="hidden md:flex"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            レポートをダウンロード
+          </Button>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <p className="text-xs text-slate-400 font-bold">保護者</p>

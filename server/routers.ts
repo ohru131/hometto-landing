@@ -213,6 +213,78 @@ export const appRouter = router({
       };
     }),
   }),
+
+  // Schools & Classes (学校・クラス管理)
+  school: router({
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        address: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createSchool(input);
+        return { id };
+      }),
+    
+    getAll: publicProcedure.query(async () => {
+      return await db.getAllSchools();
+    }),
+  }),
+
+  class: router({
+    create: protectedProcedure
+      .input(z.object({
+        schoolId: z.number(),
+        name: z.string(),
+        grade: z.number().optional(),
+        teacherId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await db.createClass(input);
+        return { id };
+      }),
+    
+    getBySchool: publicProcedure
+      .input(z.object({ schoolId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getClassesBySchool(input.schoolId);
+      }),
+    
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getClassById(input.id);
+      }),
+    
+    getStudents: publicProcedure
+      .input(z.object({ classId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getUsersByClass(input.classId);
+      }),
+  }),
+
+  // Role Management (ロール管理)
+  role: router({
+    updateUserRole: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        role: z.enum(["student", "teacher", "admin"]),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateUserRole(input.userId, input.role);
+        return { success: true };
+      }),
+    
+    assignToClass: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        classId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.assignUserToClass(input.userId, input.classId);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

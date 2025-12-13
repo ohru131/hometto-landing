@@ -22,6 +22,13 @@
       "when": 1765606031524,
       "tag": "0002_superb_raza",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1765607449071,
+      "tag": "0003_majestic_mephistopheles",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,8 @@
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, BarChart3, Calendar, Heart, Lightbulb, Loader2, Sparkles, Trophy, Users } from "lucide-react";
+import { ArrowLeft, BarChart3, Calendar, Download, Heart, Lightbulb, Loader2, Sparkles, Trophy, Users } from "lucide-react";
+import { exportUsersCSV, exportTokenHistoryCSV } from "@/lib/export";
 import { Link } from "wouter";
 import { Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useMemo } from "react";
@@ -101,6 +102,47 @@ export default function TeacherDashboard() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            <Button
+              onClick={() => {
+                if (allUsers) {
+                  exportUsersCSV(allUsers.map(u => ({
+                    id: u.id,
+                    name: u.displayName || u.name || "",
+                    displayName: u.displayName || undefined,
+                    role: u.role,
+                    tokenBalance: u.tokenBalance,
+                    createdAt: new Date(u.createdAt),
+                  })));
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="hidden md:flex"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              生徒データCSV
+            </Button>
+            <Button
+              onClick={() => {
+                if (allPraises && allUsers) {
+                  const userMap = new Map(allUsers.map(u => [u.id, u.displayName || u.name || `User${u.id}`]));
+                  exportTokenHistoryCSV(allPraises.map(p => ({
+                    from: userMap.get(p.fromUserId) || `User${p.fromUserId}`,
+                    to: userMap.get(p.toUserId) || `User${p.toUserId}`,
+                    message: p.message || undefined,
+                    stampType: p.stampType,
+                    tokenAmount: p.tokenAmount,
+                    createdAt: new Date(p.createdAt),
+                  })));
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="hidden md:flex"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              トークン履歴CSV
+            </Button>
             <div className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               {new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
