@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Check, Heart, Link as LinkIcon, Shield, Star, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
@@ -29,9 +30,11 @@ export default function Home() {
             <a href="#features" className="hover:text-primary transition-colors">特徴</a>
             <a href="#future" className="hover:text-primary transition-colors">未来</a>
           </nav>
-          <Button className="btn-bouncy bg-primary text-white hover:bg-primary/90 rounded-full px-6">
-            デモを見る
-          </Button>
+          <Link href="/demo">
+            <Button className="btn-bouncy bg-primary text-white hover:bg-primary/90 rounded-full px-6">
+              デモを見る
+            </Button>
+          </Link>
         </div>
       </header>
 
@@ -58,10 +61,12 @@ export default function Home() {
                 先生だけでなく、子ども同士が認め合う新しい学校の形をつくります。
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
+                <Link href="/demo">
                 <Button size="lg" className="btn-bouncy bg-primary text-white hover:bg-primary/90 text-lg px-8 h-14">
                   はじめる
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
+              </Link>
                 <Button size="lg" variant="outline" className="btn-bouncy border-2 border-foreground/10 hover:bg-foreground/5 text-lg px-8 h-14">
                   仕組みを知る
                 </Button>
@@ -332,9 +337,11 @@ export default function Home() {
                   あなたの学校でも、新しい評価の形を体験しませんか？
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link href="/demo">
                   <Button size="lg" className="btn-bouncy bg-primary text-white hover:bg-primary/90 text-xl px-10 h-16 rounded-full shadow-xl shadow-primary/30">
-                    導入相談・デモ依頼
+                    デモを体験する
                   </Button>
+                </Link>
                   <Button size="lg" variant="outline" className="btn-bouncy bg-white border-2 border-foreground/10 text-xl px-10 h-16 rounded-full">
                     資料ダウンロード
                   </Button>
