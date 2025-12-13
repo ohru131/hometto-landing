@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { requestNotificationPermission } from "@/lib/notifications";
+import { subscribeToPushNotifications, unsubscribeFromPushNotifications, checkPushSubscription } from "@/lib/pushNotifications";
 import { ArrowLeft, Bell, BellOff, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
@@ -11,6 +12,7 @@ export default function NotificationSettings() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [praiseNotif, setPraiseNotif] = useState(true);
   const [cooperationNotif, setCooperationNotif] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(false);
 
   useEffect(() => {
     if ("Notification" in window) {
@@ -23,6 +25,9 @@ export default function NotificationSettings() {
     
     if (savedPraise !== null) setPraiseNotif(savedPraise === "true");
     if (savedCoop !== null) setCooperationNotif(savedCoop === "true");
+
+    // Check push subscription status
+    checkPushSubscription().then(setPushEnabled);
   }, []);
 
   const handleRequestPermission = async () => {
@@ -43,6 +48,24 @@ export default function NotificationSettings() {
   const handleToggleCooperation = (checked: boolean) => {
     setCooperationNotif(checked);
     localStorage.setItem("notif_cooperation", String(checked));
+  };
+
+  const handleTogglePush = async (checked: boolean) => {
+    if (checked) {
+      const subscription = await subscribeToPushNotifications();
+      if (subscription) {
+        setPushEnabled(true);
+        toast.success("プッシュ通知を有効にしました！");
+      } else {
+        toast.error("プッシュ通知の設定に失敗しました");
+      }
+    } else {
+      const success = await unsubscribeFromPushNotifications();
+      if (success) {
+        setPushEnabled(false);
+        toast.success("プッシュ通知を無効にしました");
+      }
+    }
   };
 
   return (
@@ -133,6 +156,20 @@ export default function NotificationSettings() {
                 <Switch
                   checked={cooperationNotif}
                   onCheckedChange={handleToggleCooperation}
+                />
+              </div>
+
+              {/* Push Notifications */}
+              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                <div className="flex-1">
+                  <h3 className="font-bold text-slate-800 mb-1">プッシュ通知</h3>
+                  <p className="text-sm text-slate-600">
+                    アプリを開いていない時も通知を受け取ります
+                  </p>
+                </div>
+                <Switch
+                  checked={pushEnabled}
+                  onCheckedChange={handleTogglePush}
                 />
               </div>
             </CardContent>

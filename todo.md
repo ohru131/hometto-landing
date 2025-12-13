@@ -80,12 +80,24 @@
 - [ ] 全ページの多言語対応
 
 ## プッシュ通知の強化
-- [ ] Service Workerのプッシュ通知対応
-- [ ] バックグラウンド通知の実装
-- [ ] 通知購読の管理
+- [x] Service Workerのプッシュ通知対応
+- [x] バックグラウンド通知の実装
+- [x] 通知購読の管理
 
 ## Symbol SDK連携
 - [ ] Symbol SDK v3の統合
 - [ ] テストネット接続設定
 - [ ] トークン送信のオンチェーン記録
 - [ ] NFT発行のオンチェーン記録
+
+### 全ページの翻訳適用（詳細）
+- [ ] Demo.tsx
+- [ ] RoleSelection.tsx
+- [ ] BlockchainInfo.tsx
+- [ ] TeacherDashboard.tsx
+- [ ] ParentDashboard.tsx
+- [ ] CooperationDemo.tsx
+- [ ] AvatarCustomizer.tsx
+- [ ] ClassManagement.tsx
+- [ ] AdminDashboard.tsx
+- [ ] NotificationSettings.tsx

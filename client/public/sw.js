@@ -46,3 +46,27 @@ self.addEventListener('activate', (event) => {
     })
   );
 });
+
+// プッシュ通知を受信
+self.addEventListener('push', (event) => {
+  const options = {
+    body: event.data ? event.data.text() : 'New notification from Hometto',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: 'hometto-notification',
+    requireInteraction: false,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification('Hometto', options)
+  );
+});
+
+// 通知をクリックした時の処理
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('/')
+  );
+});
