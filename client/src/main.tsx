@@ -8,6 +8,7 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
 import { registerServiceWorker } from "./registerSW";
+import "./i18n";
 
 const queryClient = new QueryClient();
 

@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Check, Heart, Link as LinkIcon, Shield, Star, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 export default function Home() {
   // The userAuth hooks provides authentication state
@@ -35,11 +37,14 @@ export default function Home() {
             <a href="#features" className="hover:text-primary transition-colors">特徴</a>
             <a href="#future" className="hover:text-primary transition-colors">未来</a>
           </nav>
-          <Link href="/demo">
-            <Button className="btn-bouncy bg-primary text-white hover:bg-primary/90 rounded-full px-6">
-              デモを見る
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <Link href="/demo">
+              <Button className="btn-bouncy bg-primary text-white hover:bg-primary/90 rounded-full px-6">
+                デモを見る
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
