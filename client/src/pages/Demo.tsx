@@ -46,7 +46,9 @@ export default function Demo() {
         <div className="bg-primary/10 py-2 text-center text-xs font-bold text-primary">
           <span className="mr-4">ほかのデモもためしてみよう：</span>
           <Link href="/cooperation-demo" className="underline hover:text-primary/80 mr-4">協力チェーン</Link>
-          <Link href="/teacher-dashboard" className="underline hover:text-primary/80">先生用画面</Link>
+          <Link href="/teacher-dashboard" className="underline hover:text-primary/80 mr-4">先生用画面</Link>
+          <Link href="/parent-dashboard" className="underline hover:text-primary/80 mr-4">保護者用画面</Link>
+          <Link href="/avatar-customizer" className="underline hover:text-primary/80">アバター</Link>
         </div>
         <div className="container py-4 flex items-center justify-between">
           <Link href="/">

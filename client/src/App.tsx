@@ -8,6 +8,8 @@ import Home from "./pages/Home";
 import Demo from "./pages/Demo";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import CooperationDemo from "./pages/CooperationDemo";
+import ParentDashboard from "./pages/ParentDashboard";
+import AvatarCustomizer from "./pages/AvatarCustomizer";
 
 
 function Router() {
@@ -17,6 +19,8 @@ function Router() {
       <Route path={"/demo"} component={Demo} />
       <Route path={"/teacher-dashboard"} component={TeacherDashboard} />
       <Route path={"/cooperation-demo"} component={CooperationDemo} />
+      <Route path={"/parent-dashboard"} component={ParentDashboard} />
+      <Route path={"/avatar-customizer"} component={AvatarCustomizer} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
