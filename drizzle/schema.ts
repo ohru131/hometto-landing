@@ -28,6 +28,11 @@ export const users = mysqlTable("users", {
   tokenBalance: int("tokenBalance").default(0).notNull(), // 所持トークン数
   schoolId: int("schoolId"), // 学校ID
   classId: int("classId"), // クラスID
+  
+  // Symbol blockchain account info
+  symbolPrivateKey: varchar("symbolPrivateKey", { length: 64 }), // Symbolアカウントの秘密鍵
+  symbolPublicKey: varchar("symbolPublicKey", { length: 64 }), // Symbolアカウントの公開鍵
+  symbolAddress: varchar("symbolAddress", { length: 64 }), // Symbolアカウントのアドレス
 });
 
 export type User = typeof users.$inferSelect;
@@ -44,6 +49,7 @@ export const praises = mysqlTable("praises", {
   stampType: varchar("stampType", { length: 50 }).notNull(), // スタンプの種類
   tokenAmount: int("tokenAmount").default(1).notNull(), // 送信トークン数
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  blockchainTxHash: varchar("blockchainTxHash", { length: 64 }), // ブロックチェーントランザクションハッシュ
 });
 
 export type Praise = typeof praises.$inferSelect;
@@ -59,6 +65,7 @@ export const cooperations = mysqlTable("cooperations", {
   requiredApprovals: int("requiredApprovals").default(4).notNull(), // 必要な承認数
   currentApprovals: int("currentApprovals").default(0).notNull(), // 現在の承認数
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  blockchainTxHash: varchar("blockchainTxHash", { length: 64 }), // ブロックチェーントランザクションハッシュ
 });
 
 export type Cooperation = typeof cooperations.$inferSelect;

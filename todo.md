@@ -101,3 +101,13 @@
 - [ ] ClassManagement.tsx
 - [ ] AdminDashboard.tsx
 - [ ] NotificationSettings.tsx
+
+## Symbol SDK v3実装（進行中）
+- [ ] Symbol SDK v3の公式ドキュメント調査
+- [ ] symbol-sdk npmパッケージのインストール
+- [ ] テストネット接続設定
+- [ ] アカウント生成機能
+- [ ] トークン送信のオンチェーン記録
+- [ ] NFT発行のオンチェーン記録
+- [ ] トランザクション履歴の取得
+- [ ] BlockchainInfo.tsxへの統合

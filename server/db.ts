@@ -132,6 +132,26 @@ export async function updateUserTokenBalance(userId: number, amount: number) {
   }).where(eq(users.id, userId));
 }
 
+export async function updateUserSymbolAccount(userId: number, symbolAccount: { symbolPrivateKey: string; symbolPublicKey: string; symbolAddress: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users).set(symbolAccount).where(eq(users.id, userId));
+}
+
+export async function getUserSymbolAccount(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select({
+    symbolPrivateKey: users.symbolPrivateKey,
+    symbolPublicKey: users.symbolPublicKey,
+    symbolAddress: users.symbolAddress,
+  }).from(users).where(eq(users.id, userId)).limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
@@ -145,7 +165,15 @@ export async function createPraise(data: InsertPraise) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.insert(praises).values(data);
+  const result = await db.insert(praises).values(data);
+  return result[0].insertId;
+}
+
+export async function updatePraiseBlockchainTxHash(praiseId: number, txHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(praises).set({ blockchainTxHash: txHash }).where(eq(praises.id, praiseId));
 }
 
 export async function getPraisesByUserId(userId: number, limit = 50) {
@@ -266,6 +294,13 @@ export async function incrementCooperationApprovals(cooperationId: number) {
   await db.update(cooperations)
     .set({ currentApprovals: sql`${cooperations.currentApprovals} + 1` })
     .where(eq(cooperations.id, cooperationId));
+}
+
+export async function updateCooperationBlockchainTxHash(cooperationId: number, txHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(cooperations).set({ blockchainTxHash: txHash }).where(eq(cooperations.id, cooperationId));
 }
 
 // ===== Unlocked Items (アバターアイテム) =====

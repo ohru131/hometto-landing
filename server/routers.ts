@@ -1,9 +1,9 @@
-import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import * as symbolBlockchain from "./symbolBlockchain";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -12,7 +12,7 @@ export const appRouter = router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.clearCookie('session', { ...cookieOptions, maxAge: -1 });
       return {
         success: true,
       } as const;
@@ -51,8 +51,41 @@ export const appRouter = router({
         tokenAmount: z.number().default(1),
       }))
       .mutation(async ({ ctx, input }) => {
-        // トークンを送信
-        await db.createPraise({
+        // 送信者のSymbolアカウントを取得または作成
+        let senderAccount = await db.getUserSymbolAccount(ctx.user.id);
+        if (!senderAccount || !senderAccount.symbolPrivateKey) {
+          // Symbolアカウントが存在しない場合は新規作成
+          const newAccount = symbolBlockchain.generateNewAccount();
+          await db.updateUserSymbolAccount(ctx.user.id, {
+            symbolPrivateKey: newAccount.privateKey,
+            symbolPublicKey: newAccount.publicKey,
+            symbolAddress: newAccount.address,
+          });
+          senderAccount = {
+            symbolPrivateKey: newAccount.privateKey,
+            symbolPublicKey: newAccount.publicKey,
+            symbolAddress: newAccount.address,
+          };
+        }
+
+        // 受信者のSymbolアカウントを取得または作成
+        let recipientAccount = await db.getUserSymbolAccount(input.toUserId);
+        if (!recipientAccount || !recipientAccount.symbolAddress) {
+          const newAccount = symbolBlockchain.generateNewAccount();
+          await db.updateUserSymbolAccount(input.toUserId, {
+            symbolPrivateKey: newAccount.privateKey,
+            symbolPublicKey: newAccount.publicKey,
+            symbolAddress: newAccount.address,
+          });
+          recipientAccount = {
+            symbolPrivateKey: newAccount.privateKey,
+            symbolPublicKey: newAccount.publicKey,
+            symbolAddress: newAccount.address,
+          };
+        }
+
+        // データベースにほめトークンを記録
+        const praiseId = await db.createPraise({
           fromUserId: ctx.user.id,
           toUserId: input.toUserId,
           message: input.message,
@@ -62,8 +95,26 @@ export const appRouter = router({
         
         // 受信者のトークン残高を増やす
         await db.updateUserTokenBalance(input.toUserId, input.tokenAmount);
+
+        // Symbolブロックチェーンにトランザクションを記録
+        try {
+          const txMessage = `Hometto Praise: ${input.stampType} (${input.tokenAmount} tokens) - ${input.message || 'No message'}`;
+          const txResult = await symbolBlockchain.recordTokenTransaction(
+            senderAccount.symbolPrivateKey!,
+            recipientAccount.symbolAddress!,
+            txMessage
+          );
+
+          if (txResult.success && txResult.hash) {
+            // トランザクションハッシュをデータベースに保存
+            await db.updatePraiseBlockchainTxHash(praiseId, txResult.hash);
+          }
+        } catch (error) {
+          console.error('Failed to record on blockchain:', error);
+          // ブロックチェーン記録に失敗してもデータベース記録は成功しているので続行
+        }
         
-        return { success: true };
+        return { success: true, praiseId };
       }),
     
     getReceived: protectedProcedure
@@ -122,7 +173,7 @@ export const appRouter = router({
         // 協力レコードを取得
         const cooperation = await db.getCooperationById(input.cooperationId);
         if (!cooperation) {
-          throw new Error("協力レコードが見つかりません");
+          throw new Error("Cooperation record not found");
         }
         
         // currentApprovalsを更新
@@ -134,8 +185,42 @@ export const appRouter = router({
         // 全員承認済みなら、全員にトークンを付与
         if (allApproved) {
           const participants = await db.getCooperationParticipants(input.cooperationId);
+          
+          // 各参加者にトークンを付与
           for (const participant of participants) {
-            await db.updateUserTokenBalance(participant.userId, 5); // 協力NFTは5トークン
+            await db.updateUserTokenBalance(participant.userId, 5);
+          }
+
+          // Symbolブロックチェーンに協力NFTを記録
+          try {
+            const senderParticipant = participants[0];
+            if (!senderParticipant) {
+              throw new Error('Sender not found');
+            }
+
+            const senderAccount = await db.getUserSymbolAccount(senderParticipant.userId);
+            if (!senderAccount || !senderAccount.symbolPrivateKey) {
+              throw new Error('Sender Symbol account not found');
+            }
+
+            const recipientParticipant = participants.length > 1 ? participants[1] : participants[0];
+            const recipientAccount = await db.getUserSymbolAccount(recipientParticipant.userId);
+            if (!recipientAccount || !recipientAccount.symbolAddress) {
+              throw new Error('Recipient Symbol account not found');
+            }
+
+            const txMessage = `Hometto Cooperation NFT: ${cooperation.title} - Completed by ${participants.length} members`;
+            const txResult = await symbolBlockchain.recordTokenTransaction(
+              senderAccount.symbolPrivateKey,
+              recipientAccount.symbolAddress,
+              txMessage
+            );
+
+            if (txResult.success && txResult.hash) {
+              await db.updateCooperationBlockchainTxHash(input.cooperationId, txResult.hash);
+            }
+          } catch (error) {
+            console.error('Failed to record cooperation NFT on blockchain:', error);
           }
         }
         
@@ -169,69 +254,48 @@ export const appRouter = router({
     unlockItem: protectedProcedure
       .input(z.object({
         itemId: z.string(),
-        cost: z.number(),
       }))
       .mutation(async ({ ctx, input }) => {
-        // トークン残高をチェック
-        if (ctx.user.tokenBalance < input.cost) {
-          throw new Error("トークンが不足しています");
-        }
-        
-        // すでにアンロック済みかチェック
-        const isUnlocked = await db.isItemUnlocked(ctx.user.id, input.itemId);
-        if (isUnlocked) {
-          throw new Error("このアイテムは既にアンロック済みです");
-        }
-        
-        // トークンを消費
-        await db.updateUserTokenBalance(ctx.user.id, -input.cost);
-        
-        // アイテムをアンロック
         await db.unlockItem({
           userId: ctx.user.id,
           itemId: input.itemId,
         });
-        
         return { success: true };
       }),
     
-    getUnlockedItems: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserUnlockedItems(ctx.user.id);
-    }),
+    getUnlockedItems: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUserUnlockedItems(ctx.user.id);
+      }),
   }),
 
-  // Statistics (統計データ)
-  stats: router({
-    getOverview: publicProcedure.query(async () => {
-      const allPraises = await db.getAllPraises(1000);
-      const allUsers = await db.getAllUsers();
-      
-      return {
-        totalUsers: allUsers.length,
-        totalPraises: allPraises.length,
-        totalTokens: allUsers.reduce((sum, u) => sum + (u.tokenBalance || 0), 0),
-      };
-    }),
-  }),
-
-  // Schools & Classes (学校・クラス管理)
+  // Schools and Classes
   school: router({
+    getAll: publicProcedure.query(async () => {
+      return await db.getAllSchools();
+    }),
+    
     create: protectedProcedure
       .input(z.object({
         name: z.string(),
         address: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const id = await db.createSchool(input);
-        return { id };
+        const schoolId = await db.createSchool({
+          name: input.name,
+          address: input.address,
+        });
+        return { id: schoolId, success: true };
       }),
-    
-    getAll: publicProcedure.query(async () => {
-      return await db.getAllSchools();
-    }),
   }),
 
   class: router({
+    getBySchool: publicProcedure
+      .input(z.object({ schoolId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getClassesBySchool(input.schoolId);
+      }),
+    
     create: protectedProcedure
       .input(z.object({
         schoolId: z.number(),
@@ -240,51 +304,17 @@ export const appRouter = router({
         teacherId: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const id = await db.createClass(input);
-        return { id };
-      }),
-    
-    getBySchool: publicProcedure
-      .input(z.object({ schoolId: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getClassesBySchool(input.schoolId);
-      }),
-    
-    getById: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getClassById(input.id);
-      }),
-    
-    getStudents: publicProcedure
-      .input(z.object({ classId: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getUsersByClass(input.classId);
-      }),
-  }),
-
-  // Role Management (ロール管理)
-  role: router({
-    updateUserRole: protectedProcedure
-      .input(z.object({
-        userId: z.number(),
-        role: z.enum(["student", "teacher", "admin"]),
-      }))
-      .mutation(async ({ input }) => {
-        await db.updateUserRole(input.userId, input.role);
-        return { success: true };
-      }),
-    
-    assignToClass: protectedProcedure
-      .input(z.object({
-        userId: z.number(),
-        classId: z.number(),
-      }))
-      .mutation(async ({ input }) => {
-        await db.assignUserToClass(input.userId, input.classId);
-        return { success: true };
+        const classId = await db.createClass({
+          schoolId: input.schoolId,
+          name: input.name,
+          grade: input.grade,
+          teacherId: input.teacherId,
+        });
+        return { id: classId, success: true };
       }),
   }),
 });
 
 export type AppRouter = typeof appRouter;
+
+const COOKIE_NAME = 'session';
