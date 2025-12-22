@@ -185,8 +185,8 @@ export default function TeacherDashboard() {
                 <Trophy className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-bold">総トークン数</p>
-                <p className="text-2xl font-heading font-bold">{stats?.totalTokens || 0} <span className="text-sm font-normal text-slate-400">枚</span></p>
+                <p className="text-sm text-muted-foreground font-bold">総ほめトークン</p>
+                <p className="text-2xl font-heading font-bold">{stats?.totalPraises || 0} <span className="text-sm font-normal text-slate-400">件</span></p>
               </div>
             </CardContent>
           </Card>

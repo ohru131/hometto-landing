@@ -41,6 +41,29 @@ export const appRouter = router({
     }),
   }),
 
+  // Role Management
+  role: router({
+    updateUserRole: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        role: z.enum(["student", "teacher", "admin"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateUserRole(input.userId, input.role);
+        return { success: true };
+      }),
+    
+    assignToClass: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        classId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.assignUserToClass(input.userId, input.classId);
+        return { success: true };
+      }),
+  }),
+
   // Praise (ほめトークン)
   praise: router({
     send: protectedProcedure
@@ -312,9 +335,24 @@ export const appRouter = router({
         });
         return { id: classId, success: true };
       }),
+    }),
+
+  stats: router({
+    getOverview: publicProcedure.query(async () => {
+      const allUsers = await db.getAllUsers();
+      const allPraises = await db.getAllPraises();
+      const allCooperations = await db.getAllCooperations();
+      
+      return {
+        totalUsers: allUsers?.length || 0,
+        totalPraises: allPraises?.length || 0,
+        totalCooperations: allCooperations?.length || 0,
+        averagePraisesPerUser: allUsers && allUsers.length > 0 
+          ? (allPraises?.length || 0) / allUsers.length 
+          : 0,
+      };
+    }),
   }),
 });
-
 export type AppRouter = typeof appRouter;
-
 const COOKIE_NAME = 'session';

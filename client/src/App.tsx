@@ -6,6 +6,8 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import RoleSelection from "@/pages/RoleSelection";
 import ClassManagement from "@/pages/ClassManagement";
 import BlockchainInfo from "@/pages/BlockchainInfo";
+import BlockchainExplorer from "@/pages/BlockchainExplorer";
+import DemoLogin from "@/pages/DemoLogin";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -26,6 +28,8 @@ function Router() {
       <Route path={"/role-selection"} component={RoleSelection} />
       <Route path={"/class-management"} component={ClassManagement} />
       <Route path={"/blockchain-info"} component={BlockchainInfo} />
+      <Route path={"/blockchain-explorer"} component={BlockchainExplorer} />
+      <Route path={"/demo-login"} component={DemoLogin} />
       <Route path={"/demo"} component={Demo} />
       <Route path={"/teacher-dashboard"} component={TeacherDashboard} />
       <Route path={"/cooperation-demo"} component={CooperationDemo} />

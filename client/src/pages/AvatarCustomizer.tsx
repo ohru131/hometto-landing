@@ -70,14 +70,11 @@ export default function AvatarCustomizer() {
     
     if (isUnlocked) {
       setAccessory(item);
-    } else if ((currentUser?.tokenBalance || 0) >= item.cost) {
+    } else {
       unlockMutation.mutate({
         itemId: item.id,
-        cost: item.cost,
       });
       setAccessory(item);
-    } else {
-      toast.error("トークンが足りません！");
     }
   };
 
