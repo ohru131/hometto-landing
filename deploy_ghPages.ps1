@@ -85,7 +85,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -101,11 +101,13 @@ jobs:
           fi
 
       - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: `${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist/public
-          publish_branch: gh-pages
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://git:`${GITHUB_TOKEN}@github.com/`${GITHUB_REPOSITORY}.git
+          npx gh-pages -d dist/public --dotfiles -b gh-pages -u "github-actions-bot <support+actions@github.com>"
+        env:
+          GITHUB_TOKEN: `${{ secrets.GITHUB_TOKEN }}
 "@
 
 Set-Content -Path $workflowFile -Value $workflowContent -Encoding utf8
