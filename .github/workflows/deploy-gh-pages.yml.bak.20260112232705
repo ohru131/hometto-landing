@@ -1,4 +1,4 @@
-name: Build and Deploy to GitHub Pages
+name: Build and Deploy to GitHub Pages (gh-pages)
 
 on:
   push:
@@ -13,32 +13,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 10
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies (client)
+        working-directory: client
+        run: npm ci
 
-      - name: Build
-        run: pnpm run build
+      - name: Build (client)
+        working-directory: client
+        run: npm run build
 
       - name: Create 404 fallback for SPA
         run: |
-          if [ -f dist/public/index.html ]; then
-            cp dist/public/index.html dist/public/404.html || true
+          if [ -f client/dist/index.html ]; then
+            cp client/dist/index.html client/dist/404.html || true
           fi
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist/public
+          publish_dir: ./client/dist
           publish_branch: gh-pages

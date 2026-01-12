@@ -15,7 +15,7 @@
   Commit message
 
 .PARAMETER AddGhPages
-  If set, patch client/package.json to add gh-pages deploy scripts/devDependency.
+  If set, patch package.json to add gh-pages deploy scripts/devDependency.
 
 #>
 
@@ -23,7 +23,7 @@ param(
   [string]$RepoPath = ".",
   [string]$Branch = "main",
   [string]$Remote = "origin",
-  [string]$CommitMessage = "Add GH Actions workflow: build client and deploy to gh-pages",
+  [string]$CommitMessage = "Fix GH Actions workflow: use root pnpm build and deploy dist/public",
   [switch]$AddGhPages
 )
 
@@ -62,7 +62,7 @@ if (Test-Path $workflowFile) {
 }
 
 $workflowContent = @"
-name: Build and Deploy to GitHub Pages (gh-pages)
+name: Build and Deploy to GitHub Pages
 
 on:
   push:
@@ -77,68 +77,73 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'pnpm'
 
-      - name: Install dependencies (client)
-        working-directory: client
-        run: npm ci
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Build (client)
-        working-directory: client
-        run: npm run build
+      - name: Build
+        run: pnpm run build
 
       - name: Create 404 fallback for SPA
         run: |
-          if [ -f client/dist/index.html ]; then
-            cp client/dist/index.html client/dist/404.html || true
+          if [ -f dist/public/index.html ]; then
+            cp dist/public/index.html dist/public/404.html || true
           fi
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: `${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./client/dist
+          publish_dir: ./dist/public
           publish_branch: gh-pages
 "@
 
 Set-Content -Path $workflowFile -Value $workflowContent -Encoding utf8
 Write-Info "Wrote workflow to $workflowFile"
 
-# Optionally patch client/package.json
-$clientPkg = Join-Path $repoFullPath "client\package.json"
+# Optionally patch package.json
+$pkgFile = Join-Path $repoFullPath "package.json"
 if ($AddGhPages) {
-  if (Test-Path $clientPkg) {
+  if (Test-Path $pkgFile) {
     try {
-      $jsonText = Get-Content $clientPkg -Raw
+      Set-StrictMode -Off
+      $jsonText = Get-Content $pkgFile -Raw
       $pkg = $jsonText | ConvertFrom-Json
 
       if (-not $pkg.scripts) { $pkg | Add-Member -NotePropertyName scripts -NotePropertyValue @{} }
-      if (-not $pkg.scripts.build) { Write-Warn "client/package.json に build スクリプトがありません。確認してください。" }
-
+      
       if (-not $pkg.homepage) {
         $user = (& git config user.name) -replace ' ',''
         if (-not $user) { $user = "USERNAME" }
-        $pkg.homepage = "https://$user.github.io/hometto-landing"
+        $pkg | Add-Member -NotePropertyName homepage -NotePropertyValue "https://$user.github.io/hometto-landing"
         Write-Info "Added homepage: $pkg.homepage"
       }
 
-      if (-not $pkg.scripts.predeploy) { $pkg.scripts.predeploy = "npm run build" }
-      if (-not $pkg.scripts.deploy) { $pkg.scripts.deploy = "gh-pages -d dist" }
+      if (-not $pkg.scripts.predeploy) { $pkg.scripts | Add-Member -NotePropertyName predeploy -NotePropertyValue "npm run build" }
+      if (-not $pkg.scripts.deploy) { $pkg.scripts | Add-Member -NotePropertyName deploy -NotePropertyValue "gh-pages -d dist/public" }
 
       if (-not $pkg.devDependencies) { $pkg | Add-Member -NotePropertyName devDependencies -NotePropertyValue @{} }
-      if (-not $pkg.devDependencies.'gh-pages') { $pkg.devDependencies.'gh-pages' = "^5.0.0"; Write-Info "Added devDependency gh-pages ^5.0.0" }
+      if (-not $pkg.devDependencies.'gh-pages') { $pkg.devDependencies | Add-Member -NotePropertyName "gh-pages" -NotePropertyValue "^6.0.0"; Write-Info "Added devDependency gh-pages ^6.0.0" }
 
       $pkgJson = $pkg | ConvertTo-Json -Depth 10
-      Set-Content -Path $clientPkg -Value $pkgJson -Encoding utf8
-      Write-Info "Updated client/package.json"
+      Set-Content -Path $pkgFile -Value $pkgJson -Encoding utf8
+      Write-Info "Updated package.json"
+      Set-StrictMode -Version Latest
     } catch {
-      Write-Err "Failed to patch client/package.json: $_"; exit 1
+      Write-Err "Failed to patch package.json: $_"; exit 1
     }
   } else {
-    Write-Warn "client/package.json not found; -AddGhPages skipped."
+    Write-Warn "package.json not found; -AddGhPages skipped."
   }
 }
 
