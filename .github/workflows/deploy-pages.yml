@@ -1,0 +1,48 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies (client)
+        working-directory: client
+        run: npm ci
+
+      - name: Build (client)
+        working-directory: client
+        run: npm run build
+
+      - name: Create 404 fallback for SPA
+        run: |
+          if [ -f client/dist/index.html ]; then
+            cp client/dist/index.html client/dist/404.html || true
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: client/dist
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1
